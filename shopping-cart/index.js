@@ -3,7 +3,7 @@ const rl = require('readline-sync');
 /**
  * Representasi dari sebuah Objek Produk (Model).
  * @constructor
- * @param {number} id - ID unik produk, dibuat otomatis berbasis indeks.
+ * @param {number} id - ID unik produk (berbasis indeks).
  * @param {string} name - Nama produk.
  * @param {number} price - Harga produk per satuan.
  * @param {number} stock - Jumlah stok yang tersedia di toko.
@@ -15,7 +15,7 @@ function Product(id, name, price, stock){
     this.stock = stock;
 
     /**
-     * Mengurangi stok toko saat barang dimasukkan ke keranjang.
+     * Mengurangi stok master toko saat barang dimasukkan ke keranjang belanja.
      * @param {number} amount - Jumlah kuantitas yang dibeli.
      */
     this.withdraw = function(amount){
@@ -23,7 +23,7 @@ function Product(id, name, price, stock){
     }
 
     /**
-     * Mengembalikan stok toko saat barang dihapus dari keranjang.
+     * Mengembalikan stok master toko saat barang dihapus dari keranjang belanja.
      * @param {number} amount - Jumlah kuantitas yang dikembalikan.
      */
     this.restock = function(amount){
@@ -36,18 +36,17 @@ function Product(id, name, price, stock){
  * @constructor
  */
 function ProductController(){
-    /** @type {Product[]} Array penampung seluruh objek produk di toko */
+    /** @type {Product[]} Array penampung seluruh instans objek produk di toko */
     this.products = [];
 
     /**
-     * Mengubah array data mentah menjadi kumpulan Objek Product asli.
+     * Mengubah urutan array data mentah menjadi kumpulan Objek Product asli.
      * @param {Object[]} data - Array berisi objek mentah dari database.
      * @returns {Product[]} Array berisi instans objek Product.
      */
     this.generateProducts = function(data){
         for (let i = 0; i < data.length; i++){
             const item = data[i];
-            // ID otomatis menggunakan indeks perulangan 'i' (0, 1, 2, dst)
             const product = new Product(i, item.name, item.price, item.stock);
             this.products.push(product);
         }
@@ -55,7 +54,7 @@ function ProductController(){
     }
 
     /**
-     * Mencari objek produk di toko berdasarkan ID secara manual (Linear Search).
+     * Mencari objek produk berdasarkan ID menggunakan metode Linear Search.
      * @param {number} id - ID produk yang dicari.
      * @returns {Product|undefined} Mengembalikan objek Product jika ketemu, atau undefined.
      */
@@ -71,7 +70,7 @@ function ProductController(){
 }
 
 // ==========================================
-// DATA MENTAH & CONFIGURATION PROGRAM
+// DATA MENTAH & KONFIGURASI PROGRAM
 // ==========================================
 
 /** @type {Object[]} Database mentah katalog produk */
@@ -83,7 +82,7 @@ const productsData = [
     {name: 'Mie Goreng', price: 6, stock: 8,}
 ]
 
-/** @type {Object} Enum pemetaan nomor pilihan menu toko */
+/** @type {Object} Enum untuk pemetaan nomor pilihan menu toko */
 const Menu = {
     VIEW_PRODUCTS: 1,
     ADD_TO_CART: 2,
@@ -105,27 +104,26 @@ function logMenu(){
 }
 
 /**
- * Menghitung frekuensi kemunculan objek produk di dalam keranjang belanja.
+ * Menghitung frekuensi kemunculan produk di dalam keranjang belanja berdasarkan ID.
  * @param {Product[]} cartArray - Array dinamis penampung item belanjaan.
- * @returns {Object} Objek map dengan format -> { 'Nama Produk': Jumlah Kuantitas }
+ * @returns {Object} Objek map dengan format -> { 'ID_Produk': Jumlah_Kuantitas }
  */
 function occurences(cartArray){
     let occurences = {};
 
     for (let i = 0; i < cartArray.length; i++){
-        // Ambil properti .name dari objek Product agar key berbentuk String teks biasa
-        const productName = cartArray[i].name;
-        if (productName in occurences){
-            occurences[productName]++
+        const productId = cartArray[i].id;
+        if (productId in occurences){
+            occurences[productId]++
         } else {
-            occurences[productName] = 1;
+            occurences[productId] = 1;
         }        
     }
     return occurences;
 }
 
 // ==========================================
-// INISIALISASI VARIABEL GLOBAL RUNTIME
+// INISIALISASI VARIABEL RUNTIME
 // ==========================================
 
 const productController = new ProductController();
@@ -133,7 +131,8 @@ const products = productController.generateProducts(productsData);
 
 let choice;
 let productOccurences;
-/** @type {Product[]} Array dinamis untuk menampung produk yang dibeli user */
+
+/** @type {Product[]} Array tempat menampung objek produk yang dibeli user */
 const cart = [];
 
 // ==========================================
@@ -143,7 +142,8 @@ const cart = [];
 do {
     console.log('');
     logMenu();
-    // Konversi langsung input string menjadi Number menggunakan operator +
+    
+    // Operator + digunakan untuk mengubah input String langsung menjadi tipe data Number
     choice = +rl.question('Enter choice: ');
 
     switch (choice){
@@ -158,51 +158,47 @@ do {
             const productId = +rl.question('Enter Product ID to add: ');
             const product = productController.findProduct(productId);
             
-            // CEGATAN VALIDASI: Mencegah error crash jika product bernilai undefined
+            // VALIDASI: Mencegah crash jika ID produk tidak ditemukan di toko
             if (!product) {
                 console.log('Product ID not found! Please check the product list again.\n');
-                continue; // Lompat langsung ke awal loop do-while
+                continue; // Langsung lompat kembali ke awal loop do-while
             }
             
             const withdrawal = +rl.question('Enter quantity: ');
             
-            // Validasi kecukupan stok toko sebelum dimasukkan ke cart
+            // VALIDASI: Memastikan permintaan beli tidak melebihi stok yang ada
             if (withdrawal > product.stock){
                 console.log(`You cannot add ${product.name} to the Cart! The stock of ${product.name} currently ${product.stock}`);
             } else {
-                product.withdraw(withdrawal); // Kurangi stok master di toko
+                product.withdraw(withdrawal); // Kurangi stok di katalog master toko
                 for (let i = 0; i < withdrawal; i++){
-                    cart.push(product); // Push objek produk utuh berulang kali sesuai qty
+                    cart.push(product); // Masukkan objek produk utuh ke keranjang belanja sesuai kuantitas
                 }
                 console.log(`Success adding ${product.name} to cart!`);
             }
             break;
 
         case Menu.VIEW_CART_AND_TOTAL:
-            let total = 0; // Wajib di-reset 0 di lingkup lokal agar tidak akumulasi ganda
+            let total = 0; // Wajib di-reset 0 di tingkat lokal agar tidak terjadi akumulasi ganda
 
-            // Petakan isi cart menjadi objek frekuensi { 'Kopi Susu': 2 }
+            // Dapatkan peta kuantitas belanjaan saat ini berbasis ID produk
             productOccurences = occurences(cart);
 
             console.log('--- Your Cart ---');
 
-            // Iterasi menggunakan key (productName) dari objek frekuensi
-            for (const productName in productOccurences){
-                const qty = productOccurences[productName];
-                let productPrice = 0;
+            for (const productId in productOccurences){
+                const qty = productOccurences[productId];
                 
-                // PENCARIAN HARGA SILANG MANUAL: Mencocokkan nama untuk mengambil properti .price
-                for (let i = 0; i < products.length; i++){
-                    if (products[i].name === productName){
-                        productPrice = products[i].price;
-                        break; // Hentikan loop pencarian harga jika sudah ketemu
-                    }
-                }
-                const subtotal = productPrice * qty;
-                total += subtotal; // Akumulasikan ke total harga belanjaan
+                // Konversi productId ke Number dengan tanda + karena loop for...in mengembalikan key berbentuk String
+                const currentProduct = productController.findProduct(+productId);
+                
+                if (currentProduct){
+                    const subtotal = currentProduct.price * qty;
+                    total += subtotal;
 
-                console.log(`${productName} x ${qty} | subtotal : $${subtotal}`);
-                console.log('-----------------'); // Dicetak per item sesuai preferensi visual pembatas kartu
+                    console.log(`${currentProduct.name} x ${qty} | subtotal : $${subtotal}`);
+                    console.log('-----------------'); 
+                }
             }
             console.log(`TOTAL TO PAY: $${total}`);
             break;
@@ -211,41 +207,37 @@ do {
             const removeId = +rl.question('Enter Product ID to remove: ');
             const targetProduct = productController.findProduct(removeId);
 
-            // Validasi eksistensi id produk yang ingin dihapus
+            // VALIDASI: Memastikan ID barang yang ingin dihapus memang valid ada di toko
             if (!targetProduct){
                 console.log('Product Id is not found!');
                 break;
             }
 
-            let countInCart = 0;
-            // Scan cart dari depan ke belakang hanya untuk menghitung total kuantitas barang tersebut di cart
-            for (let i = 0; i < cart.length; i++){
-                if (cart[i].id === removeId){
-                    countInCart++
-                }
-            }
+            // Manfaatkan fungsi occurences untuk mengambil jumlah total item di dalam keranjang
+            productOccurences = occurences(cart);
+            const qtyInCart = productOccurences[removeId] || 0; // Beri nilai fallback 0 jika undefined
 
-            // Jika barang memang tidak pernah ada di dalam keranjang belanja
-            if (countInCart === 0){
+            // VALIDASI: Memastikan barang tersebut memang pernah dimasukkan ke dalam keranjang belanja
+            if (qtyInCart === 0){
                 console.log(`The product "${targetProduct.name}" is not in your cart.`);
                 break;
             }
 
             // REVERSE LOOP LOGIC FOR SPLICE: 
             // Loop berjalan mundur (dari belakang ke depan) untuk menghindari bug 
-            // pergeseran indeks elemen sebelah kanan saat .splice() dijalankan.
+            // pergeseran indeks elemen sisi kanan saat fungsi .splice() dieksekusi.
             for (let i = cart.length - 1; i >= 0; i--){
                 if (cart[i].id === removeId){
                     cart.splice(i, 1); // Hapus tepat 1 elemen pada indeks tersebut
                 }
             }
 
-            targetProduct.restock(countInCart); // Kembalikan total kuantitas barang yang dihapus ke stok master toko
-            console.log(`Success removing all "${targetProduct.name}" from cart. Stock restored by ${countInCart}.`);
+            targetProduct.restock(qtyInCart); // Kembalikan seluruh kuantitas kupon belanja ke stok katalog toko
+            console.log(`Success removing all "${targetProduct.name}" from cart. Stock restored by ${qtyInCart}.`);
             break;
             
     }
 
-} while (choice !== Menu.EXIT) // Loop akan terus berjalan selama user tidak memilih angka 5 (Exit)
+} while (choice !== Menu.EXIT) // Loop akan terus berputar selama pengguna tidak memilih angka 5 (Exit)
 
 console.log('\nThank you for using our Shopping Cart System!');
