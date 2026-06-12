@@ -19,7 +19,7 @@ function display(stages, hiddenWord, clue, guessedLetters, theme, wrongCount){
   console.log(`Clue: ${clue}`);
   console.log(`Word: ${hiddenWord.join(' ')}`);
   console.log(`Wrong Letters: [ ${guessedLetters.join(',')} ]`);
-  console.log('-------------------------------------------'); 
+  console.log('-------------------------------------------');
 }
 
 /**
